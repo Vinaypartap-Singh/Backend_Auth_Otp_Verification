@@ -11,64 +11,84 @@ import { formatError, renderEmailEjs } from "../helper.js";
 import jwt from "jsonwebtoken";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { sendMail } from "../config/mail.js";
+import { upload } from "../middleware/multerMiddleware.js";
+import { uploadOnCloudinary } from "../config/cloudinary.js";
 
 const authRouter = Router();
 
-authRouter.post("/register", async (req, res) => {
-  try {
-    const body = req.body;
-    const payload = registerSchemaValidation.parse(body);
+authRouter.post(
+  "/register",
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      const body = req.body;
+      const payload = registerSchemaValidation.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: {
-        email: payload.email,
-      },
-    });
-
-    if (user) {
-      return res.status(422).json({ message: "User already exist." });
-    }
-
-    // If user does not exist we will hash the password
-    const salt = await bcrypt.genSalt(10);
-    payload.password = await bcrypt.hash(payload.password, salt);
-
-    // generate otp for account verification
-
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const emailBody = await renderEmailEjs("verifyEmail", {
-      name: payload.name,
-      otp: otp,
-    });
-
-    await sendMail(payload.email, "Verification OTP Email", emailBody);
-
-    await prisma.user.create({
-      data: {
-        name: payload.name,
-        email: payload.email,
-        password: payload.password,
-        user_otp: otp,
-      },
-    });
-
-    return res.status(200).json({
-      message:
-        "Your account has been created successfully. Enter OTP to verify your account",
-    });
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
+      const user = await prisma.user.findUnique({
+        where: {
+          email: payload.email,
+        },
       });
+
+      if (user) {
+        return res.status(422).json({ message: "User already exist." });
+      }
+
+      const profileImageLocalPath = req.file.path;
+
+      const profileImage = await uploadOnCloudinary(profileImageLocalPath);
+
+      console.log(profileImage.url);
+
+      if (!profileImage) {
+        return res.status(200).json({
+          message:
+            "Error while uploading image to cloudinary please try again later",
+        });
+      }
+
+      // If user does not exist we will hash the password
+      const salt = await bcrypt.genSalt(10);
+      payload.password = await bcrypt.hash(payload.password, salt);
+
+      // generate otp for account verification
+
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      const emailBody = await renderEmailEjs("verifyEmail", {
+        name: payload.name,
+        otp: otp,
+      });
+
+      await sendMail(payload.email, "Verification OTP Email", emailBody);
+
+      await prisma.user.create({
+        data: {
+          name: payload.name,
+          email: payload.email,
+          password: payload.password,
+          user_otp: otp,
+          profile: profileImage.url,
+        },
+      });
+
+      return res.status(200).json({
+        message:
+          "Your account has been created successfully. Enter OTP to verify your account",
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const formattedError = formatError(error);
+        return res.status(422).json({
+          message: "Validation error.",
+          errors: formattedError,
+        });
+      }
+      return res
+        .status(422)
+        .json({ message: "Error registering user.", errors: error.message });
     }
-    return res
-      .status(422)
-      .json({ message: "Error registering user.", errors: error.message });
   }
-});
+);
 
 // Create a post for email verification
 
