@@ -14,13 +14,40 @@ datasource db {
 }
 
 model User {
-  id               Int      @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   name             String
-  email            String   @unique
+  email            String     @unique
   password         String
   user_otp         Int?
-  account_verified Boolean? @default(false)
+  account_verified Boolean?   @default(false)
   profile          String?
-  createdAt        DateTime @default(now())
-  updateAt         DateTime @updatedAt
+  createdAt        DateTime   @default(now())
+  updateAt         DateTime   @updatedAt
+  Post             Post[]
+  Comments         Comments[]
+}
+
+// In Post we need check that by which user the post is created
+
+model Post {
+  id           Int        @id @default(autoincrement())
+  user_id      Int
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title        String
+  content      String
+  commentCount Int        @default(0)
+  createdAt    DateTime   @default(now())
+  Comments     Comments[]
+}
+
+// In Comment we need to check the to which post the comment is done and by which user
+
+model Comments {
+  id        Int      @id @default(autoincrement())
+  post_id   Int
+  post      Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user_id   Int
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  comment   String
+  createdAt DateTime @default(now())
 }
