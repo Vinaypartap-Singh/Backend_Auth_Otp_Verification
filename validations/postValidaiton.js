@@ -20,3 +20,9 @@ export const postUpdateSchemaValidation = z.object({
     .string({ message: "Content is required" })
     .min(1, "Content must not be empty"),
 });
+
+export const postCommentSchemaValidation = z.object({
+  comment: z
+    .string({ message: "required" })
+    .min(6, { message: "Comment must be at least 6 characters long" }),
+});
