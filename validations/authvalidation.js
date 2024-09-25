@@ -40,3 +40,27 @@ export const verifyEmailSchema = z.object({
     .min(100000, { message: "OTP must be at least 6 digits." })
     .max(999999, { message: "OTP must be at most 6 digits." }), // Ensures it is a six-digit OTP
 });
+
+export const passwordResetSchema = z
+  .object({
+    otp: z
+      .string()
+      .min(6, "OTP must be 6 digits long")
+      .max(6, "OTP must be 6 digits long")
+      .regex(/^\d{6}$/, "OTP must be a 6-digit number"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/\d/, "Password must contain at least one number")
+      .regex(
+        /[@$!%*?&]/,
+        "Password must contain at least one special character"
+      ),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
