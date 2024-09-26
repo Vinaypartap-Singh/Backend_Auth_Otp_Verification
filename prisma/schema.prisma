@@ -22,6 +22,7 @@ model User {
   account_verified Boolean?           @default(false)
   passwordResetOtp Int?
   profile          String?
+  coverImage       String?
   createdAt        DateTime           @default(now())
   updateAt         DateTime           @updatedAt
   Post             Post[]
