@@ -37,6 +37,8 @@ model SocialMediaLinks {
   url      String
   user_id  Int
   user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, platform])
 }
 
 // In Post we need check that by which user the post is created
