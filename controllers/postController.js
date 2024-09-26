@@ -24,8 +24,6 @@ postRouter.post(
       const payload = postSchemaValidation.parse(body);
       const user_id = req.user.id;
 
-      console.log(user_id);
-
       // Check User In Database
 
       const user = await prisma.user.findUnique({

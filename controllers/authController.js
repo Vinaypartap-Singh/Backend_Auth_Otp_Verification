@@ -38,8 +38,6 @@ authRouter.post(
 
       const profileImage = await uploadOnCloudinary(profileImageLocalPath);
 
-      console.log(profileImage.url);
-
       if (!profileImage) {
         return res.status(400).json({
           message: "Error While Uploading Image. Please Try Again",
