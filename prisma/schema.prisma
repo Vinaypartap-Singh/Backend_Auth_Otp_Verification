@@ -14,18 +14,29 @@ datasource db {
 }
 
 model User {
-  id               Int        @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   name             String
-  email            String     @unique
+  email            String             @unique
   password         String
   user_otp         Int?
-  account_verified Boolean?   @default(false)
+  account_verified Boolean?           @default(false)
   passwordResetOtp Int?
   profile          String?
-  createdAt        DateTime   @default(now())
-  updateAt         DateTime   @updatedAt
+  createdAt        DateTime           @default(now())
+  updateAt         DateTime           @updatedAt
   Post             Post[]
   Comments         Comments[]
+  SocialMediaLinks SocialMediaLinks[]
+}
+
+// Social Media Schema
+
+model SocialMediaLinks {
+  id       Int    @id @default(autoincrement())
+  platform String
+  url      String
+  user_id  Int
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 // In Post we need check that by which user the post is created
