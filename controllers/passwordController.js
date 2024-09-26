@@ -3,7 +3,6 @@ import { ZodError } from "zod";
 import { formatError, renderEmailEjs } from "../helper";
 import { authMiddleware } from "../middleware/authMiddleware";
 import prisma from "../db/db.config";
-import { postUpdateSchemaValidation } from "../validations/postValidaiton";
 import bcrypt from "bcrypt";
 import { passwordResetSchema } from "../validations/authvalidation";
 import { sendMail } from "../config/mail";

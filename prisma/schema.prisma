@@ -36,6 +36,7 @@ model Post {
   user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
   title        String
   content      String
+  postImage    String?
   commentCount Int        @default(0)
   createdAt    DateTime   @default(now())
   Comments     Comments[]

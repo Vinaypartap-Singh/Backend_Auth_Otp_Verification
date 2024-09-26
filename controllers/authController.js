@@ -41,9 +41,8 @@ authRouter.post(
       console.log(profileImage.url);
 
       if (!profileImage) {
-        return res.status(200).json({
-          message:
-            "Error while uploading image to cloudinary please try again later",
+        return res.status(400).json({
+          message: "Error While Uploading Image. Please Try Again",
         });
       }
 

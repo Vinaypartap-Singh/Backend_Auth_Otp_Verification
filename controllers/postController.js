@@ -7,60 +7,80 @@ import {
 import { formatError } from "../helper.js";
 import { ZodError } from "zod";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/multerMiddleware.js";
+import { uploadOnCloudinary } from "../config/cloudinary.js";
 
 const postRouter = Router();
 
 // create post
 
-postRouter.post("/", authMiddleware, async (req, res) => {
-  try {
-    const body = req.body;
-    const payload = postSchemaValidation.parse(body);
-    const user_id = req.user.id;
+postRouter.post(
+  "/",
+  upload.single("postImage"),
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const body = req.body;
+      const payload = postSchemaValidation.parse(body);
+      const user_id = req.user.id;
 
-    console.log(user_id);
+      console.log(user_id);
 
-    // Check User In Database
+      // Check User In Database
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: user_id,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User Not Found" });
-    }
-
-    const post = await prisma.post.create({
-      data: {
-        user_id: user_id,
-        title: payload.title,
-        content: payload.content,
-      },
-    });
-
-    // Do not know how to serialize a BigInt. This is not an database issue just need to return string
-
-    const responsePostData = {
-      ...post,
-      commentCount: post.commentCount.toString(),
-    };
-
-    return res.json({ responsePostData, user_id });
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
+      const user = await prisma.user.findUnique({
+        where: {
+          id: user_id,
+        },
       });
+
+      if (!user) {
+        return res.status(404).json({ message: "User Not Found" });
+      }
+
+      // Upload Image
+
+      const postImageLocalPath = req.file.path;
+
+      const postImage = await uploadOnCloudinary(postImageLocalPath);
+
+      if (!postImage) {
+        return res.status(400).json({
+          message: "Error While Uploading Image. Please Try Again",
+        });
+      }
+
+      const post = await prisma.post.create({
+        data: {
+          user_id: user_id,
+          title: payload.title,
+          content: payload.content,
+          postImage: postImage.url,
+        },
+      });
+
+      // Do not know how to serialize a BigInt. This is not an database issue just need to return string
+
+      const responsePostData = {
+        ...post,
+        commentCount: post.commentCount.toString(),
+      };
+
+      return res.json({ responsePostData, user_id });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const formattedError = formatError(error);
+        return res.status(422).json({
+          message: "Validation error.",
+          errors: formattedError,
+        });
+      }
+      return res
+        .status(422)
+        .json({ message: "Error Creating Post", errors: error.message });
     }
-    return res
-      .status(422)
-      .json({ message: "Error Creating Post", errors: error.message });
   }
-});
+);
 
 // Read Post
 
