@@ -14,21 +14,26 @@ datasource db {
 }
 
 model User {
-  id               Int                @id @default(autoincrement())
-  name             String
-  email            String             @unique
-  password         String
-  user_otp         Int?
-  account_verified Boolean?           @default(false)
-  passwordResetOtp Int?
-  profile          String?
-  coverImage       String?
-  createdAt        DateTime           @default(now())
-  updateAt         DateTime           @updatedAt
-  Post             Post[]
-  Comments         Comments[]
-  SocialMediaLinks SocialMediaLinks[]
-  ActivityLog      ActivityLog[]
+  id                      Int                @id @default(autoincrement())
+  name                    String
+  email                   String             @unique
+  password                String
+  user_otp                Int?
+  account_verified        Boolean?           @default(false)
+  passwordResetOtp        Int?
+  profile                 String?
+  coverImage              String?
+  // Two Factor authentication email otp
+  useTwoFactorEmail       Boolean            @default(false)
+  twoFactorEmail          String?
+  twoFactorEmailVerifyOtp String?
+  twoFactorEmailVerified  Boolean?
+  createdAt               DateTime           @default(now())
+  updateAt                DateTime           @updatedAt
+  Post                    Post[]
+  Comments                Comments[]
+  SocialMediaLinks        SocialMediaLinks[]
+  ActivityLog             ActivityLog[]
 }
 
 // Social Media Schema

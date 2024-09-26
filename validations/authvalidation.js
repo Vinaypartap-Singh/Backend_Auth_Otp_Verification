@@ -64,3 +64,24 @@ export const passwordResetSchema = z
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
+
+export const enableTwoFactorAuthSchema = z.object({
+  useTwoFactorEmail: z.boolean({ message: "True or False" }),
+});
+
+export const twoFactorAuthSchema = z.object({
+  twoFactorEmail: z
+    .string({ message: "email is required" })
+    .email({ message: "Please use the correct email" }),
+});
+
+export const twoFactorAuthVerifySchema = z.object({
+  twoFactorEmail: z
+    .string({ message: "email is required" })
+    .email({ message: "Please use the correct email" }),
+  otp: z
+    .number()
+    .int({ message: "OTP must be a number." })
+    .min(100000, { message: "OTP must be at least 6 digits." })
+    .max(999999, { message: "OTP must be at most 6 digits." }), // Ensures it is a six-digit OTP
+});
