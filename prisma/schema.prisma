@@ -28,6 +28,7 @@ model User {
   Post             Post[]
   Comments         Comments[]
   SocialMediaLinks SocialMediaLinks[]
+  ActivityLog      ActivityLog[]
 }
 
 // Social Media Schema
@@ -45,25 +46,37 @@ model SocialMediaLinks {
 // In Post we need check that by which user the post is created
 
 model Post {
-  id           Int        @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   user_id      Int
-  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   title        String
   content      String
   postImage    String?
-  commentCount Int        @default(0)
-  createdAt    DateTime   @default(now())
+  commentCount Int           @default(0)
+  createdAt    DateTime      @default(now())
   Comments     Comments[]
+  ActivityLog  ActivityLog[]
 }
 
 // In Comment we need to check the to which post the comment is done and by which user
 
 model Comments {
-  id        Int      @id @default(autoincrement())
-  post_id   Int
-  post      Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user_id   Int
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  comment   String
-  createdAt DateTime @default(now())
+  id          Int           @id @default(autoincrement())
+  post_id     Int
+  post        Post          @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user_id     Int
+  user        User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  comment     String
+  createdAt   DateTime      @default(now())
+  ActivityLog ActivityLog[]
+}
+
+model ActivityLog {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  post_id    Int?
+  post       Post?     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  comment_id Int?
+  comments   Comments? @relation(fields: [comment_id], references: [id], onDelete: Cascade)
 }

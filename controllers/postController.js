@@ -48,6 +48,8 @@ postRouter.post(
         });
       }
 
+      // Create Post
+
       const post = await prisma.post.create({
         data: {
           user_id: user_id,
@@ -56,6 +58,28 @@ postRouter.post(
           postImage: postImage.url,
         },
       });
+      // Check if there's already an activity log for the user
+      const activityLog = await prisma.activityLog.findFirst({
+        where: { user_id: user_id },
+      });
+
+      if (activityLog) {
+        // Update existing activity log
+        await prisma.activityLog.update({
+          where: { id: activityLog.id },
+          data: {
+            post_id: post.id,
+          },
+        });
+      } else {
+        // Create a new activity log entry
+        await prisma.activityLog.create({
+          data: {
+            user_id: user_id,
+            post_id: post.id,
+          },
+        });
+      }
 
       // Do not know how to serialize a BigInt. This is not an database issue just need to return string
 

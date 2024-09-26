@@ -1,13 +1,15 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
-import prisma from "../db/db.config";
-import { socialMediaLinkSchema } from "../validations/userProfileValidations";
-import { formatError } from "../helper";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import prisma from "../db/db.config.js";
+import { socialMediaLinkSchema } from "../validations/userProfileValidations.js";
+import { formatError } from "../helper.js";
 import { ZodError } from "zod";
-import { upload } from "../middleware/multerMiddleware";
-import { uploadOnCloudinary } from "../config/cloudinary";
+import { upload } from "../middleware/multerMiddleware.js";
+import { uploadOnCloudinary } from "../config/cloudinary.js";
 
 const profileRouter = Router();
+
+// User Social Media Profile Links
 
 profileRouter.post("/socialMediaLinks", authMiddleware, async (req, res) => {
   try {
@@ -66,6 +68,8 @@ profileRouter.post("/socialMediaLinks", authMiddleware, async (req, res) => {
       .json({ message: "Error registering user.", errors: error.message });
   }
 });
+
+// User Profile Cover Image
 
 profileRouter.put(
   "/profileCoverImage",

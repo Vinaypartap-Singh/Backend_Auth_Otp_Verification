@@ -92,6 +92,29 @@ commentRouter.post("/:post_id", authMiddleware, async (req, res) => {
       },
     });
 
+    // Check if there's already an activity log for the user
+    const activityLog = await prisma.activityLog.findFirst({
+      where: { user_id: user_id },
+    });
+
+    if (activityLog) {
+      // Update existing activity log
+      await prisma.activityLog.update({
+        where: { id: activityLog.id },
+        data: {
+          comment_id: comment.id,
+        },
+      });
+    } else {
+      // Create a new activity log entry
+      await prisma.activityLog.create({
+        data: {
+          user_id: user_id,
+          comment_id: comment.id,
+        },
+      });
+    }
+
     // Increment the comment count on the post
     await prisma.post.update({
       where: { id: Number(post_id) },

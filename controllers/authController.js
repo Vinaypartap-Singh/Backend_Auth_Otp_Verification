@@ -58,6 +58,8 @@ authRouter.post(
 
       await sendMail(payload.email, "Verification OTP Email", emailBody);
 
+      // Create User
+
       await prisma.user.create({
         data: {
           name: payload.name,
@@ -131,6 +133,14 @@ authRouter.post("/verify-account", async (req, res) => {
       data: {
         account_verified: true,
         user_otp: null,
+      },
+    });
+
+    // Update Activity Log when the user is verified
+
+    await prisma.activityLog.create({
+      data: {
+        user_id: user.id,
       },
     });
 
