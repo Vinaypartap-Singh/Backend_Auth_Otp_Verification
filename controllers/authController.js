@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  enableTwoFactorAuthSchema,
   loginSchemaValidation,
   registerSchemaValidation,
   twoFactorAuthSchema,
