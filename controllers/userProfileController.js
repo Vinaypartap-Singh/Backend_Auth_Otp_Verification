@@ -124,4 +124,54 @@ profileRouter.put(
   }
 );
 
+// Get User Activity
+
+profileRouter.get("/userActivity", authMiddleware, async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: user_id,
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Unzuthorized Access" });
+    }
+
+    // If User Exist then simply get user acivity
+
+    const activity = await prisma.activityLog.findFirst({
+      where: {
+        user_id: user.id,
+      },
+      include: {
+        user: true, // Include user details
+        post: true, // Include post associated with this activity log (if any)
+        comments: true, // Include comments associated with this activity log (if any)
+      },
+    });
+
+    if (!activity) {
+      return res.status(400).json({
+        message: "Please check user account as the activity is not initialized",
+      });
+    }
+
+    return res.status(200).json({ message: "Activity Found", activity });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const formattedError = formatError(error);
+      return res.status(422).json({
+        message: "Validation error.",
+        errors: formattedError,
+      });
+    }
+    return res
+      .status(422)
+      .json({ message: "Error Getting user activity.", errors: error.message });
+  }
+});
+
 export default profileRouter;
