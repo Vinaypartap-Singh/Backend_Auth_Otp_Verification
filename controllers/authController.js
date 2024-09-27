@@ -8,9 +8,7 @@ import {
 } from "../validations/authvalidation.js";
 import prisma from "../db/db.config.js";
 import bcrypt from "bcrypt";
-import { ZodError } from "zod";
 import {
-  formatError,
   handleCatchReturnError,
   handleTryReturnError,
   renderEmailEjs,

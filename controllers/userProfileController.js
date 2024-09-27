@@ -2,8 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import prisma from "../db/db.config.js";
 import { socialMediaLinkSchema } from "../validations/userProfileValidations.js";
-import { formatError } from "../helper.js";
-import { ZodError } from "zod";
+import { handleCatchReturnError, handleTryReturnError } from "../helper.js";
 import { upload } from "../middleware/multerMiddleware.js";
 import { uploadOnCloudinary } from "../config/cloudinary.js";
 
@@ -27,7 +26,7 @@ profileRouter.post("/socialMediaLinks", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     // verify existing socialmedia platform
@@ -40,9 +39,11 @@ profileRouter.post("/socialMediaLinks", authMiddleware, async (req, res) => {
     });
 
     if (existingPlatform) {
-      return res
-        .status(400)
-        .json({ message: "Social Media Link Already Exist try another one" });
+      return handleTryReturnError(
+        res,
+        401,
+        "Social Media Link Already Exist try another one"
+      );
     }
 
     // If User Exist then continue adding socialMediaURL
@@ -54,18 +55,13 @@ profileRouter.post("/socialMediaLinks", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: "User Social Media Links Added" });
+    return handleTryReturnError(res, 200, "User social media link added");
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error registering user.", errors: error.message });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while adding social media link"
+    );
   }
 });
 
@@ -86,7 +82,7 @@ profileRouter.put(
       });
 
       if (!user) {
-        return res.status(400).json({ message: "Unauthorized Access" });
+        return handleTryReturnError(res, 401, "Unauthorized Access");
       }
 
       const coverImageLocalPath = req.file.path;
@@ -94,9 +90,11 @@ profileRouter.put(
       const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
       if (!coverImage) {
-        return res
-          .status(400)
-          .json({ message: "Error while uploading to cloudinary" });
+        return handleTryReturnError(
+          res,
+          401,
+          "Error while uploading image to cloudinary"
+        );
       }
 
       await prisma.user.update({
@@ -108,18 +106,13 @@ profileRouter.put(
         },
       });
 
-      return res.status(200).json({ message: "Cover Image Added" });
+      return handleTryReturnError(res, 200, "Cover Image Added");
     } catch (error) {
-      if (error instanceof ZodError) {
-        const formattedError = formatError(error);
-        return res.status(422).json({
-          message: "Validation error.",
-          errors: formattedError,
-        });
-      }
-      return res
-        .status(422)
-        .json({ message: "Error registering user.", errors: error.message });
+      return handleCatchReturnError(
+        error,
+        res,
+        "Error while adding cover image"
+      );
     }
   }
 );
@@ -137,7 +130,7 @@ profileRouter.get("/userActivity", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Unzuthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     // If User Exist then simply get user acivity
@@ -154,23 +147,20 @@ profileRouter.get("/userActivity", authMiddleware, async (req, res) => {
     });
 
     if (!activity) {
-      return res.status(400).json({
-        message: "Please check user account as the activity is not initialized",
-      });
+      return handleTryReturnError(
+        res,
+        401,
+        "Please check user account as the acitivty is not initialized"
+      );
     }
 
-    return res.status(200).json({ message: "Activity Found", activity });
+    return handleTryReturnError(res, 200, "Activity Found", activity);
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Getting user activity.", errors: error.message });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while checking user activity"
+    );
   }
 });
 

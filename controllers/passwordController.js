@@ -1,6 +1,9 @@
 import { Router } from "express";
-import { ZodError } from "zod";
-import { formatError, renderEmailEjs } from "../helper";
+import {
+  handleCatchReturnError,
+  handleTryReturnError,
+  renderEmailEjs,
+} from "../helper";
 import { authMiddleware } from "../middleware/authMiddleware";
 import prisma from "../db/db.config";
 import bcrypt from "bcrypt";
@@ -8,6 +11,8 @@ import { passwordResetSchema } from "../validations/authvalidation";
 import { sendMail } from "../config/mail";
 
 const passwordRouter = Router();
+
+// Request Password Reset OTP
 
 passwordRouter.post("/", authMiddleware, async (req, res) => {
   try {
@@ -20,7 +25,7 @@ passwordRouter.post("/", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "User not found");
     }
 
     // Generate OTP For user
@@ -42,20 +47,13 @@ passwordRouter.post("/", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(200).json({
-      message: "Password Reset Otp has been sent to your mailbox",
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Password Reset Otp has been sent to your mailbox"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error registering user.", errors: error.message });
+    return handleCatchReturnError(error, res, "Error while password reset");
   }
 });
 
@@ -72,13 +70,13 @@ passwordRouter.post("/reset-password", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     // If user exist then verify otp
 
     if (user.passwordResetOtp !== payload.otp) {
-      return res.status(402).json({ message: "Incorrect or Invalid Otp" });
+      return handleTryReturnError(res, 401, "Invalid OTP or Password");
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -100,20 +98,16 @@ passwordRouter.post("/reset-password", authMiddleware, async (req, res) => {
 
     await sendMail(user.email, "Account Verified", emailBody);
 
-    return res.status(200).json({
-      message:
-        "Your Password reset successfully. You can login using new password",
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Your password reset successfully. You can login using new password"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error registering user.", errors: error.message });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while password reset. Please check"
+    );
   }
 });

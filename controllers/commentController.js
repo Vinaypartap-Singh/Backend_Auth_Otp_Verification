@@ -1,7 +1,6 @@
 import { Router } from "express";
 import prisma from "../db/db.config";
-import { formatError } from "../helper";
-import { ZodError } from "zod";
+import { handleCatchReturnError, handleTryReturnError } from "../helper";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { postCommentSchemaValidation } from "../validations/postValidaiton";
 
@@ -34,21 +33,16 @@ commentRouter.get("/:post_id", async (req, res) => {
     // If Comments Length === 0
 
     if (comments.length === 0) {
-      return res.status(200).json({ message: "no Comment on this post" });
+      return handleTryReturnError(res, 200, "No Comment on this post");
     }
 
-    return res.status(200).json({ message: "Comments", data: comments });
+    return handleTryReturnError(res, 200, "Comments", comments);
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Creating Post", errors: error.message });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while getting post comments"
+    );
   }
 });
 
@@ -67,7 +61,7 @@ commentRouter.post("/:post_id", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     // check if post exist in database
@@ -79,9 +73,11 @@ commentRouter.post("/:post_id", authMiddleware, async (req, res) => {
     });
 
     if (!post) {
-      return res
-        .status(400)
-        .json({ message: "Post does not exist. Please check and try again" });
+      return handleTryReturnError(
+        res,
+        401,
+        "Post does not exist. Please re-check"
+      );
     }
 
     const comment = await prisma.comments.create({
@@ -110,21 +106,14 @@ commentRouter.post("/:post_id", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(201).json({
-      message: "Comment created successfully",
-      data: comment,
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Comment Created Successfully",
+      comment
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Creating Post", errors: error.message });
+    return handleCatchReturnError(error, res, "Error while creating comment");
   }
 });
 
@@ -144,7 +133,7 @@ commentRouter.put("/update/:comment_id", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     // check whether comment exist in database or not
@@ -156,15 +145,17 @@ commentRouter.put("/update/:comment_id", authMiddleware, async (req, res) => {
     });
 
     if (!comment) {
-      return res.status(400).json({ message: "Comment does not exist" });
+      return handleTryReturnError(res, 401, "Comment does not exist");
     }
 
     // check if user id == comment id
 
     if (comment.user_id !== user_id) {
-      return res
-        .status(400)
-        .json({ message: "Unauthorized access to edit the comment" });
+      return handleTryReturnError(
+        res,
+        401,
+        "Unauthorized Access To edit the comment"
+      );
     }
 
     // If everything goes alright update the comment
@@ -178,20 +169,9 @@ commentRouter.put("/update/:comment_id", authMiddleware, async (req, res) => {
       },
     });
 
-    return res
-      .status(200)
-      .json({ message: "Comment Updated", data: updatedComment });
+    return handleTryReturnError(res, 200, "Comment Updated", updatedComment);
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Creating Post", errors: error.message });
+    return handleCatchReturnError(error, res, "Error while updating comment");
   }
 });
 
@@ -212,7 +192,7 @@ commentRouter.delete(
       });
 
       if (!user) {
-        return res.status(422).json({ message: "Unauthorized Access" });
+        return handleTryReturnError(res, 401, "Unauthorized Access");
       }
 
       const commentData = await prisma.comments.findUnique({
@@ -222,15 +202,15 @@ commentRouter.delete(
       });
 
       if (!commentData) {
-        return res
-          .status(403)
-          .json({ message: "Comment Not Found Check Again" });
+        return handleTryReturnError(res, 401, "Comment not found check again");
       }
 
       if (Number(commentData.user_id) !== Number(user_id)) {
-        return res
-          .status(403)
-          .json({ message: "You are not authorized to delete this post." });
+        return handleTryReturnError(
+          res,
+          401,
+          "You don't have authorized access to edit the comment"
+        );
       }
 
       await prisma.comments.delete({
@@ -239,20 +219,9 @@ commentRouter.delete(
         },
       });
 
-      return res
-        .status(200)
-        .json({ message: "Your post deleted successfully" });
+      return handleTryReturnError(res, 200, "Comment deleted successfully");
     } catch (error) {
-      if (error instanceof ZodError) {
-        const formattedError = formatError(error);
-        return res.status(422).json({
-          message: "Validation error.",
-          errors: formattedError,
-        });
-      }
-      return res
-        .status(422)
-        .json({ message: "Error Updating Post", errors: error.message });
+      return handleCatchReturnError(error, res, "Error while deleting comment");
     }
   }
 );

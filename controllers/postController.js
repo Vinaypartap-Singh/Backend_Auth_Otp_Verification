@@ -1,11 +1,10 @@
-import { response, Router } from "express";
+import { Router } from "express";
 import prisma from "../db/db.config.js";
 import {
   postSchemaValidation,
   postUpdateSchemaValidation,
 } from "../validations/postValidaiton.js";
-import { formatError } from "../helper.js";
-import { ZodError } from "zod";
+import { handleCatchReturnError, handleTryReturnError } from "../helper.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/multerMiddleware.js";
 import { uploadOnCloudinary } from "../config/cloudinary.js";
@@ -33,7 +32,7 @@ postRouter.post(
       });
 
       if (!user) {
-        return res.status(404).json({ message: "User Not Found" });
+        return handleTryReturnError(res, 403, "User Not Found");
       }
 
       // Upload Image
@@ -43,9 +42,11 @@ postRouter.post(
       const postImage = await uploadOnCloudinary(postImageLocalPath);
 
       if (!postImage) {
-        return res.status(400).json({
-          message: "Error While Uploading Image. Please Try Again",
-        });
+        return handleTryReturnError(
+          res,
+          400,
+          "Error while uploading Image. Please try again"
+        );
       }
 
       // Create Post
@@ -73,18 +74,11 @@ postRouter.post(
         commentCount: post.commentCount.toString(),
       };
 
-      return res.json({ responsePostData, user_id });
+      let data = { responsePostData, user_id };
+
+      return handleTryReturnError(res, 200, "Post Data", data);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const formattedError = formatError(error);
-        return res.status(422).json({
-          message: "Validation error.",
-          errors: formattedError,
-        });
-      }
-      return res
-        .status(422)
-        .json({ message: "Error Creating Post", errors: error.message });
+      return handleCatchReturnError(error, res, "Error while uploading post");
     }
   }
 );
@@ -102,7 +96,7 @@ postRouter.get("/", async (req, res) => {
     },
   });
 
-  return res.status(200).json({ status: 200, data: posts });
+  return handleTryReturnError(res, 200, posts);
 });
 
 // Update Post
@@ -119,7 +113,7 @@ postRouter.put("/update/:id", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 403, "User not found.");
     }
 
     const postData = await prisma.post.findUnique({
@@ -129,13 +123,15 @@ postRouter.put("/update/:id", authMiddleware, async (req, res) => {
     });
 
     if (!postData) {
-      return res.status(403).json({ message: "Post Not Found Check Again" });
+      return handleTryReturnError(res, 401, "Post nopt found check again");
     }
 
     if (Number(postData.user_id) !== Number(user_id)) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to update this post." });
+      return handleTryReturnError(
+        res,
+        401,
+        "You are not authorized to delete this post"
+      );
     }
 
     const body = req.body;
@@ -156,20 +152,14 @@ postRouter.put("/update/:id", authMiddleware, async (req, res) => {
       commentCount: postData.commentCount.toString(),
     };
 
-    return res
-      .status(200)
-      .json({ message: "Your post updated successfully", postResponseData });
+    return handleTryReturnError(
+      res,
+      200,
+      "Your Post deleted Successfully",
+      postResponseData
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Updating Post", errors: error.message });
+    return handleCatchReturnError(errro, res, "Error while updating Post");
   }
 });
 
@@ -187,7 +177,7 @@ postRouter.delete("/delete/:id", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unathorized Access");
     }
 
     const postData = await prisma.post.findUnique({
@@ -197,13 +187,15 @@ postRouter.delete("/delete/:id", authMiddleware, async (req, res) => {
     });
 
     if (!postData) {
-      return res.status(403).json({ message: "Post Not Found Check Again" });
+      return handleTryReturnError(res, 403, "Post not found check again");
     }
 
     if (Number(postData.user_id) !== Number(user_id)) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to delete this post." });
+      return handleTryReturnError(
+        res,
+        403,
+        "You are not authorizes to delete this post"
+      );
     }
 
     await prisma.post.delete({
@@ -212,18 +204,9 @@ postRouter.delete("/delete/:id", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: "Your post deleted successfully" });
+    return handleTryReturnError(res, 403, "Your Post deleted successfully");
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res
-      .status(422)
-      .json({ message: "Error Updating Post", errors: error.message });
+    return handleCatchReturnError(error, res, "Error while deleting Post");
   }
 });
 
