@@ -138,14 +138,6 @@ authRouter.post("/verify-account", async (req, res) => {
       },
     });
 
-    // Update Activity Log when the user is verified
-
-    await prisma.activityLog.create({
-      data: {
-        user_id: user.id,
-      },
-    });
-
     return res.status(200).json({
       message: "Account verification success. You can now login your account",
     });
