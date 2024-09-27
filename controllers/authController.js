@@ -372,6 +372,13 @@ authRouter.post("/addTwoFactorEmail", authMiddleware, async (req, res) => {
       });
     }
 
+    if (user.email === payload.twoFactorEmail) {
+      return res.status(400).json({
+        message:
+          "Primary email cannot be used for 2 factor authentication. Please user another email.",
+      });
+    }
+
     // generate otp for account verification
 
     const otp = Math.floor(100000 + Math.random() * 900000);
@@ -380,7 +387,7 @@ authRouter.post("/addTwoFactorEmail", authMiddleware, async (req, res) => {
       otp: otp,
     });
 
-    await sendMail(payload.email, "Verification OTP Email", emailBody);
+    await sendMail(payload.twoFactorEmail, "Verification OTP Email", emailBody);
 
     return res.status(200).json({
       message:
@@ -449,7 +456,7 @@ authRouter.put("/verifytwofactoremail", authMiddleware, async (req, res) => {
     });
 
     await sendMail(
-      user.twoFactorEmail.email,
+      user.twoFactorEmail,
       "Two Factor Authentcation Account Verified",
       emailBody
     );
