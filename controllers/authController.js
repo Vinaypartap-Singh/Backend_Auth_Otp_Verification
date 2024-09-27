@@ -9,7 +9,12 @@ import {
 import prisma from "../db/db.config.js";
 import bcrypt from "bcrypt";
 import { ZodError } from "zod";
-import { formatError, renderEmailEjs } from "../helper.js";
+import {
+  formatError,
+  handleCatchReturnError,
+  handleTryReturnError,
+  renderEmailEjs,
+} from "../helper.js";
 import jwt from "jsonwebtoken";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { sendMail } from "../config/mail.js";
@@ -33,7 +38,7 @@ authRouter.post(
       });
 
       if (user) {
-        return res.status(422).json({ message: "User already exist." });
+        return handleTryReturnError(res, 200, "User Already Exist");
       }
 
       const profileImageLocalPath = req.file.path;
@@ -41,9 +46,11 @@ authRouter.post(
       const profileImage = await uploadOnCloudinary(profileImageLocalPath);
 
       if (!profileImage) {
-        return res.status(400).json({
-          message: "Error While Uploading Image. Please Try Again",
-        });
+        return handleTryReturnError(
+          res,
+          200,
+          "Error while uploading Image. Please try again"
+        );
       }
 
       // If user does not exist we will hash the password
@@ -72,21 +79,13 @@ authRouter.post(
         },
       });
 
-      return res.status(200).json({
-        message:
-          "Your account has been created successfully. Enter OTP to verify your account",
-      });
+      return handleTryReturnError(
+        res,
+        200,
+        "Your account has been created successfully. Enter OTP to verify your account"
+      );
     } catch (error) {
-      if (error instanceof ZodError) {
-        const formattedError = formatError(error);
-        return res.status(422).json({
-          message: "Validation error.",
-          errors: formattedError,
-        });
-      }
-      return res
-        .status(422)
-        .json({ message: "Error registering user.", errors: error.message });
+      return handleCatchReturnError(error, 400, "Error while registering user");
     }
   }
 );
@@ -107,9 +106,11 @@ authRouter.post("/verify-account", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(422).json({
-        message: "Invalid Credentials cannot verify account",
-      });
+      return handleTryReturnError(
+        res,
+        402,
+        "Inavlid Credentials Cannot Verify Account"
+      );
     }
 
     // If user exist then check for otp
@@ -138,21 +139,13 @@ authRouter.post("/verify-account", async (req, res) => {
       },
     });
 
-    return res.status(200).json({
-      message: "Account verification success. You can now login your account",
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Account Verification success. YOu can now login your account"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message: "Error while login account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(error, 400, "Error While Verifying Account");
   }
 });
 
@@ -172,20 +165,21 @@ authRouter.post("/login", async (req, res) => {
     });
 
     if (!user || user === null) {
-      return res.status(422).json({
-        errors: {
-          email: "User does not exist. Please create an account to continue",
-        },
-      });
+      return handleTryReturnError(
+        res,
+        401,
+        "User Does not exist. Please create an account to continue"
+      );
     }
 
     // If User exist check if user is verified or not just in case if someoine try to login directly
 
     if (!user.account_verified) {
-      return res.status(400).json({
-        message:
-          "Your Account is not verified. Please verify your account in order to continue",
-      });
+      return handleTryReturnError(
+        res,
+        401,
+        "Your Account is not verified. Please Verify your account in order to continue"
+      );
     }
 
     // if user exist then check password
@@ -196,11 +190,7 @@ authRouter.post("/login", async (req, res) => {
     );
 
     if (!correctPassword) {
-      return res.status(422).json({
-        error: {
-          email: "Inavlid Credentials",
-        },
-      });
+      return handleTryReturnError(res, 401, "Inavlid Credentials");
     }
 
     // If everything works fine we will generate a jwt token
@@ -216,25 +206,19 @@ authRouter.post("/login", async (req, res) => {
       expiresIn: "30d",
     });
 
-    return res.json({
-      message: "Account Login Success",
-      data: {
-        ...jwtPayload,
-        token: `Bearer ${token}`,
-      },
-    });
+    const apiResponseData = {
+      ...jwtPayload,
+      token: `Bearer ${token}`,
+    };
+
+    return handleTryReturnError(
+      res,
+      200,
+      "Account Login Successfully",
+      apiResponseData
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message: "Error while login account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(error, 500, "Error while login user.");
   }
 });
 
@@ -256,13 +240,15 @@ authRouter.put("/enableTwoFactorAuth", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 401, "Unauthorized Access");
     }
 
     if (user.useTwoFactorEmail === true) {
-      return res
-        .status(400)
-        .json({ message: "Two Factor Authentication Already Enabled." });
+      return handleTryReturnError(
+        res,
+        400,
+        "Two Factor Authentication Already Enabled."
+      );
     }
 
     // Update the database
@@ -276,23 +262,17 @@ authRouter.put("/enableTwoFactorAuth", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(200).json({
-      message:
-        "Two Factor Authentication enabled. You can add your 2fa email now",
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Two Factor Authentication enabled. You can add your 2FA Email Now"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message:
-        "Error while enabling 2FA on your account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while enabling 2 Factor Authentication"
+    );
   }
 });
 
@@ -307,13 +287,11 @@ authRouter.put("/disableTwoFactorAuth", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: "Unathorized Access" });
+      return handleTryReturnError(res, 401, "Unathorized Access");
     }
 
     if (user.useTwoFactorEmail === false) {
-      return res
-        .status(400)
-        .json({ message: "Two Factor Auth Already Disabled" });
+      return handleTryReturnError(res, 400, "Two Factor Auth Already Disbaled");
     }
 
     await prisma.user.update({
@@ -325,19 +303,13 @@ authRouter.put("/disableTwoFactorAuth", authMiddleware, async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: "Two Factor Auth Disabled" });
+    return handleTryReturnError(res, 200, "Two Factor Auth Disabled");
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message: "Error while login account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while disabling Two Factor Auth"
+    );
   }
 });
 
@@ -354,21 +326,23 @@ authRouter.post("/addTwoFactorEmail", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 200, "Unauthorized Access");
     }
 
     if (!user.useTwoFactorEmail) {
-      return res.status(401).json({
-        message:
-          "Two Factor Authentication not Enabled. Please enable tow factor authentication to continue",
-      });
+      return handleTryReturnError(
+        res,
+        401,
+        "Two Factor Authentication not Enabled. Please enable tow factor authentication to continue"
+      );
     }
 
     if (user.email === payload.twoFactorEmail) {
-      return res.status(400).json({
-        message:
-          "Primary email cannot be used for 2 factor authentication. Please user another email.",
-      });
+      return handleTryReturnError(
+        res,
+        400,
+        "Primary email cannot be used for 2 factor authentication. Please user another email."
+      );
     }
 
     // generate otp for account verification
@@ -381,22 +355,17 @@ authRouter.post("/addTwoFactorEmail", authMiddleware, async (req, res) => {
 
     await sendMail(payload.twoFactorEmail, "Verification OTP Email", emailBody);
 
-    return res.status(200).json({
-      message:
-        "Verification Otp sent on your email. Please verify to continue adding email",
-    });
+    return handleTryReturnError(
+      res,
+      400,
+      "Verification Otp sent on your email. Please verify to continue adding email"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message: "Error while login account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error adding two factor auth email"
+    );
   }
 });
 
@@ -414,19 +383,19 @@ authRouter.put("/verifytwofactoremail", authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Unauthorized Access" });
+      return handleTryReturnError(res, 400, "Unauthorized Access");
     }
 
     if (user.twoFactorEmail !== payload.twoFactorEmail) {
-      return res
-        .status(401)
-        .json({ message: "Invalid Email Please enter correct email" });
+      return handleTryReturnError(
+        res,
+        401,
+        "Invalid Email Please enter correct email"
+      );
     }
 
     if (user.twoFactorEmailVerifyOtp !== payload.otp) {
-      return res
-        .status(401)
-        .json({ message: "Invalid OTP. Please check again" });
+      return handleTryReturnError(res, 401, "Invalid OTP. Please check again");
     }
 
     await prisma.user.update({
@@ -453,21 +422,17 @@ authRouter.put("/verifytwofactoremail", authMiddleware, async (req, res) => {
       emailBody
     );
 
-    return res.status(200).json({
-      message: "Your Two Factor Email has been verified successfully.",
-    });
+    return handleTryReturnError(
+      res,
+      200,
+      "Your Two Factor Email has been verified"
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      const formattedError = formatError(error);
-      return res.status(422).json({
-        message: "Validation error.",
-        errors: formattedError,
-      });
-    }
-    return res.status(422).json({
-      message: "Error while login account. Please check your credentials",
-      errors: error.message,
-    });
+    return handleCatchReturnError(
+      error,
+      res,
+      "Error while verifying two factor auth email"
+    );
   }
 });
 
