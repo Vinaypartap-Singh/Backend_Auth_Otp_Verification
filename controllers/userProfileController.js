@@ -142,7 +142,7 @@ profileRouter.get("/userActivity", authMiddleware, async (req, res) => {
 
     // If User Exist then simply get user acivity
 
-    const activity = await prisma.activityLog.findFirst({
+    const activity = await prisma.activityLog.findMany({
       where: {
         user_id: user.id,
       },
